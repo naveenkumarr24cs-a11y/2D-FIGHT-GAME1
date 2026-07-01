@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2D Fight Game</title>
+  <meta name="description" content="A browser-based 2D fighting game with sprite animations, AI opponent, and parallax backgrounds.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-wrapper">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="loading-screen">
+      <div class="loading-logo">
+        <span class="logo-p1">2D</span><span class="logo-fight">FIGHT</span><span class="logo-p2">GAME</span>
+      </div>
+      <div class="loader-bar-container">
+        <div class="loader-bar">
+          <div id="loader-fill"></div>
+        </div>
+        <span id="loader-label">Initialising…</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls-bar">
+    <div class="ctrl-group">
+      <span class="ctrl-key">WASD / ←→↑↓</span><span class="ctrl-desc">Move</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-key">J</span><span class="ctrl-desc">Light</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-key">K</span><span class="ctrl-desc">Heavy</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-key">L</span><span class="ctrl-desc">Combo</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-key">Shift</span><span class="ctrl-desc">Block</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-key">M</span><span class="ctrl-desc">Difficulty</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-key">F1</span><span class="ctrl-desc">Debug</span>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
