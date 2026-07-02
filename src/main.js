@@ -36,7 +36,12 @@ const ROUND_INTRO_DUR = 2.4;
 const ROUND_END_DUR   = 3.0;
 
 // WebSocket server address (change for production deployment)
-const WS_SERVER = 'ws://localhost:8765';
+// WebSocket server URL — uses public server in production, localhost in dev
+const IS_DEV = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const WS_SERVER = IS_DEV
+  ? 'ws://localhost:8765'
+  : 'wss://knight-fight-server.onrender.com';
+
 
 // ── Asset lists ────────────────────────────────────────────────────────────
 

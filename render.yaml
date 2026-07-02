@@ -1,0 +1,11 @@
+# Render.com deploy config for Knight Fight WebSocket Server
+services:
+  - type: web
+    name: knight-fight-server
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
