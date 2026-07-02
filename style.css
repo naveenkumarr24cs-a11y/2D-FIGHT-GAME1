@@ -3,15 +3,16 @@
 
 /* ─── Body ──────────────────────────────────────────────────────────────── */
 body {
-  background: #05050f;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #000;
   overflow: hidden;
   font-family: 'Rajdhani', 'Arial', sans-serif;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
 /* Animated grid background */
@@ -29,132 +30,331 @@ body::before {
 
 /* ─── Game wrapper ──────────────────────────────────────────────────────── */
 #game-wrapper {
-  position: relative;
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  background: #000;
   z-index: 1;
-  border: 2px solid rgba(100,130,255,.35);
-  border-radius: 4px;
-  box-shadow:
-    0 0 0 1px rgba(100,130,255,.1),
-    0 0 60px rgba(80,110,255,.25),
-    0 0 120px rgba(60,80,200,.12);
-  overflow: hidden;
-  /* Size set dynamically by engine.js */
 }
 
 #game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
   display: block;
   image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
-/* ─── Loading screen ────────────────────────────────────────────────────── */
-#loading-screen {
-  position: absolute;
-  inset: 0;
-  background: #05050f;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 40px;
-  z-index: 100;
-  transition: opacity .6s ease;
-}
 
-#loading-screen.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.loading-logo {
-  font-family: 'Orbitron', monospace;
-  font-size: clamp(28px, 4vw, 56px);
-  font-weight: 900;
-  letter-spacing: 6px;
-  display: flex;
-  gap: 10px;
-}
-
-.logo-p1    { color: #3b82f6; text-shadow: 0 0 20px #3b82f680; }
-.logo-fight { color: #f1f5f9; text-shadow: 0 0 20px #ffffff40; }
-.logo-p2    { color: #ef4444; text-shadow: 0 0 20px #ef444480; }
-
-.loader-bar-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  width: min(400px, 80vw);
-}
-
-.loader-bar {
-  width: 100%;
-  height: 6px;
-  background: rgba(255,255,255,.08);
-  border-radius: 3px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,.1);
-}
-
-#loader-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
-  border-radius: 3px;
-  transition: width .25s ease;
-  box-shadow: 0 0 8px #8b5cf680;
-}
-
-#loader-label {
-  color: rgba(255,255,255,.45);
-  font-size: 13px;
-  letter-spacing: 2px;
-  font-family: 'Orbitron', monospace;
-}
-
-/* ─── Controls bar ──────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   PC CONTROLS BAR
+   – Shown via JS (.cb-show) only on non-touch devices for 5s at fight start.
+   – Forcefully hidden on all touch screens via the media query below.
+   ══════════════════════════════════════════════════════════════════════════ */
 #controls-bar {
   position: absolute;
-  bottom: 25px;
+  bottom: 20px;
   left: 0;
   right: 0;
   z-index: 10;
-  display: flex;
+  display: none;        /* Hidden until JS adds .cb-show */
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
-  opacity: 0.95;
-  transition: opacity 1s ease;
   pointer-events: none;
+  transition: opacity 0.6s ease;
 }
 
-#controls-bar.hidden {
-  opacity: 0;
+/* Touch screens NEVER show the PC bar — override JS class if needed */
+@media (hover: none) and (pointer: coarse) {
+  #controls-bar,
+  #controls-bar.cb-show,
+  #controls-bar.cb-fade {
+    display: none !important;
+    opacity: 0 !important;
+  }
 }
+
+#controls-bar.cb-show { display: flex; opacity: 1; }
+#controls-bar.cb-fade { opacity: 0; }
 
 .ctrl-group {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(10, 15, 30, 0.85);
-  border: 1px solid rgba(100, 130, 255, 0.4);
+  gap: 7px;
+  background: rgba(10, 15, 30, 0.82);
+  border: 1px solid rgba(100, 130, 255, 0.35);
   border-radius: 6px;
-  padding: 8px 14px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  padding: 6px 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
 .ctrl-key {
   font-family: 'Orbitron', monospace;
-  font-size: 15px;
+  font-size: 13px;
   color: #38bdf8;
   font-weight: 900;
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
 }
 
 .ctrl-desc {
-  font-size: 14px;
+  font-size: 13px;
   color: #f8fafc;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE CONTROLS
+   – Injected by MobileControls.js only when isTouchDevice is true.
+   – PC screens never see this because the module skips building it.
+   – Visibility state driven by .mc-hidden / .mc-visible / .mc-dim
+   ══════════════════════════════════════════════════════════════════════════ */
+
+#mobile-controls {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 2vmin 3vmin 4vmin;
+}
+
+#mobile-controls.mc-hidden  { display: none; }
+#mobile-controls.mc-visible {
+  display: flex;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+#mobile-controls.mc-dim {
+  display: flex;
+  opacity: 0.25;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+
+/* ─── Joystick ─────────────────────────────────────────────────────────── */
+#mc-joystick-zone {
+  width: 22vmin;
+  height: 22vmin;
+  min-width: 90px;
+  min-height: 90px;
+  max-width: 130px;
+  max-height: 130px;
+  position: relative;
+  pointer-events: auto;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(60,80,200,0.15) 0%, rgba(0,0,0,0.35) 100%);
+  border: 2px solid rgba(160, 190, 255, 0.35);
+  box-shadow:
+    0 0 24px rgba(80,120,255,0.25),
+    inset 0 0 14px rgba(100,140,255,0.1);
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+#mc-joystick-base {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  border-radius: 50%;
+}
+
+#mc-joystick-stick {
+  width: 42%;
+  height: 42%;
+  background: radial-gradient(circle at 35% 30%,
+    rgba(255,255,255,0.95),
+    rgba(140,180,255,0.85) 60%,
+    rgba(80,120,255,0.5) 100%);
+  border-radius: 50%;
+  position: absolute;
+  top: 29%;
+  left: 29%;
+  pointer-events: none;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.55),
+    0 0 10px rgba(120,160,255,0.5);
+}
+
+
+/* ─── Action Button Grid (diamond layout 3×3) ──────────────────────────── */
+#mc-btn-area {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 2vmin;
+  width: 38vmin;
+  height: 28vmin;
+  min-width: 150px;
+  min-height: 110px;
+  max-width: 220px;
+  max-height: 165px;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* Diamond positions in 3×3 grid:
+     col:  1    2    3
+   row 1:  .    H    .
+   row 2:  L    .    C
+   row 3:  R    .    B   */
+.mc-btn-top   { grid-column: 2; grid-row: 1; }
+.mc-btn-left  { grid-column: 1; grid-row: 2; }
+.mc-btn-right { grid-column: 3; grid-row: 2; }
+.mc-btn-bot-l { grid-column: 1; grid-row: 3; }
+.mc-btn-bot-r { grid-column: 3; grid-row: 3; }
+
+/* ─── Base button style ──────────────────────────────────────────────── */
+.mc-btn {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: 3.2vmin;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.07s ease, box-shadow 0.07s ease;
+}
+
+/* Shine overlay on every button */
+.mc-btn::before {
+  content: '';
+  position: absolute;
+  top: 4%;
+  left: 15%;
+  width: 70%;
+  height: 45%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.45), transparent 70%);
+  pointer-events: none;
+}
+
+/* Active press effect */
+.mc-btn--active {
+  transform: scale(0.88) !important;
+}
+
+
+/* ─── Individual button themes ──────────────────────────────────────── */
+
+/* H — Heavy Attack  (red/crimson) */
+#mc-btn-heavy {
+  background: radial-gradient(circle at 50% 30%, #ff6b6b, #c0392b 70%);
+  border: 2px solid rgba(255,120,100,0.6);
+  box-shadow:
+    0 5px 18px rgba(200,50,50,0.55),
+    inset 0 -3px 8px rgba(0,0,0,0.4);
+  color: #ffe8e8;
+  text-shadow: 0 0 10px rgba(255,100,80,0.8);
+}
+#mc-btn-heavy.mc-btn--active {
+  box-shadow: 0 0 28px rgba(255,80,60,0.9), inset 0 0 12px rgba(255,120,100,0.4);
+  background: radial-gradient(circle at 50% 30%, #ff4444, #a02020 70%);
+}
+
+/* L — Light Attack  (sky blue) */
+#mc-btn-light {
+  background: radial-gradient(circle at 50% 30%, #63d3ff, #0ea5e9 70%);
+  border: 2px solid rgba(100,210,255,0.6);
+  box-shadow:
+    0 5px 18px rgba(14,165,233,0.5),
+    inset 0 -3px 8px rgba(0,0,0,0.4);
+  color: #e0f7ff;
+  text-shadow: 0 0 10px rgba(100,210,255,0.8);
+}
+#mc-btn-light.mc-btn--active {
+  box-shadow: 0 0 28px rgba(56,189,248,0.9), inset 0 0 12px rgba(100,200,255,0.4);
+  background: radial-gradient(circle at 50% 30%, #38bdf8, #0369a1 70%);
+}
+
+/* C — Combo Attack  (gold/amber) */
+#mc-btn-combo {
+  background: radial-gradient(circle at 50% 30%, #ffd166, #f0a500 70%);
+  border: 2px solid rgba(255,200,80,0.6);
+  box-shadow:
+    0 5px 18px rgba(240,165,0,0.5),
+    inset 0 -3px 8px rgba(0,0,0,0.4);
+  color: #fff5d6;
+  text-shadow: 0 0 10px rgba(255,200,60,0.8);
+}
+#mc-btn-combo.mc-btn--active {
+  box-shadow: 0 0 28px rgba(255,200,0,0.9), inset 0 0 12px rgba(255,210,60,0.4);
+  background: radial-gradient(circle at 50% 30%, #fbbf24, #b45309 70%);
+}
+
+/* R — Roll  (violet/purple) */
+#mc-btn-roll {
+  background: radial-gradient(circle at 50% 30%, #c084fc, #7c3aed 70%);
+  border: 2px solid rgba(190,130,255,0.6);
+  box-shadow:
+    0 5px 18px rgba(124,58,237,0.5),
+    inset 0 -3px 8px rgba(0,0,0,0.4);
+  color: #ede9fe;
+  text-shadow: 0 0 10px rgba(190,130,255,0.8);
+}
+#mc-btn-roll.mc-btn--active {
+  box-shadow: 0 0 28px rgba(167,139,250,0.9), inset 0 0 12px rgba(196,150,255,0.4);
+  background: radial-gradient(circle at 50% 30%, #a78bfa, #5b21b6 70%);
+}
+
+/* B — Block  (emerald green) */
+#mc-btn-block {
+  background: radial-gradient(circle at 50% 30%, #6ee7b7, #059669 70%);
+  border: 2px solid rgba(110,230,183,0.6);
+  box-shadow:
+    0 5px 18px rgba(5,150,105,0.5),
+    inset 0 -3px 8px rgba(0,0,0,0.4);
+  color: #d1fae5;
+  text-shadow: 0 0 10px rgba(100,230,170,0.8);
+}
+#mc-btn-block.mc-btn--active {
+  box-shadow: 0 0 28px rgba(52,211,153,0.9), inset 0 0 12px rgba(110,230,183,0.4);
+  background: radial-gradient(circle at 50% 30%, #34d399, #047857 70%);
+}
+
+/* ─── Button internal elements ──────────────────────────────────────── */
+.mc-btn-icon {
+  font-size: 4.5vmin;
+  line-height: 1;
+  display: block;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
+}
+
+.mc-btn-label {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.6vmin;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  margin-top: 0.5vmin;
+  opacity: 0.9;
+  display: block;
+}
+
+/* ─── Joystick direction ring ───────────────────────────────────────── */
+#mc-joystick-zone::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  border: 1px dashed rgba(160, 200, 255, 0.2);
+  pointer-events: none;
+}
+

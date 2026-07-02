@@ -33,24 +33,10 @@ export class Engine {
     window.addEventListener('resize', () => this._resize());
   }
 
-  /** Fit the canvas display inside the browser window, letterboxed. */
+  /** Fit the canvas display to the entire browser window */
   _resize() {
-    const ratio    = this.width / this.height;
-    const winW     = window.innerWidth;
-    const winH     = window.innerHeight; // full viewport
-    const winRatio = winW / winH;
-
-    let dW, dH;
-    if (winRatio > ratio) {
-      dH = winH;
-      dW = winH * ratio;
-    } else {
-      dW = winW;
-      dH = winW / ratio;
-    }
-
-    this.canvas.style.width  = `${Math.floor(dW)}px`;
-    this.canvas.style.height = `${Math.floor(dH)}px`;
+    this.canvas.style.width  = `${window.innerWidth}px`;
+    this.canvas.style.height = `${window.innerHeight}px`;
   }
 
   /**

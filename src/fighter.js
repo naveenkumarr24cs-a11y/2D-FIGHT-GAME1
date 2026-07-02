@@ -151,6 +151,16 @@ export class Fighter extends Entity {
     }
   }
 
+  /**
+   * Drive this fighter from a deserialized remote input object.
+   * Used for the remote player during online play.
+   * Mirrors handleInput() but accepts Input.deserialize() output.
+   * @param {object} inputObj — returned by Input.deserialize(mask, prevMask)
+   */
+  applyRemoteInput(inputObj) {
+    this.handleInput(inputObj);
+  }
+
   // ─── Update ───────────────────────────────────────────────────────────
 
   update(dt, opponentX = null) {
@@ -273,5 +283,46 @@ export class Fighter extends Entity {
     this.shakeTimer   = 0;
     this.shakeX       = 0;
     this.shakeY       = 0;
+  }
+
+  /**
+   * Save a compact snapshot of physics/combat state for rollback.
+   * Only saves what's needed to re-simulate — NOT animation state.
+   */
+  saveSnapshot() {
+    return {
+      x: this.x,
+      y: this.y,
+      vx: this.vx,
+      vy: this.vy,
+      health: this.health,
+      state: this.state,
+      stateTimer: this.stateTimer,
+      onGround: this.onGround,
+      facing: this.facing,
+      hitActive: this.hitActive,
+      hasHitOpponent: this.hasHitOpponent,
+      invincible: this.invincible,
+      invincibleTimer: this.invincibleTimer,
+    };
+  }
+
+  /**
+   * Restore a snapshot saved by saveSnapshot().
+   */
+  restoreSnapshot(snap) {
+    this.x               = snap.x;
+    this.y               = snap.y;
+    this.vx              = snap.vx;
+    this.vy              = snap.vy;
+    this.health          = snap.health;
+    this.state           = snap.state;
+    this.stateTimer      = snap.stateTimer;
+    this.onGround        = snap.onGround;
+    this.facing          = snap.facing;
+    this.hitActive       = snap.hitActive;
+    this.hasHitOpponent  = snap.hasHitOpponent;
+    this.invincible      = snap.invincible ?? false;
+    this.invincibleTimer = snap.invincibleTimer ?? 0;
   }
 }
