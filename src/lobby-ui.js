@@ -10,10 +10,20 @@ const CANVAS_H = 720;
 
 // Button definitions for mode select
 const MODES = [
-  { id: 'cpu',    label: 'VS CPU',          sub: 'Fight the AI — Single Player',    icon: '🤖' },
-  { id: 'create', label: 'CREATE ROOM',     sub: 'Host an online match',             icon: '🌐' },
-  { id: 'join',   label: 'JOIN ROOM',       sub: 'Enter a friend\'s room code',      icon: '🔑' },
+  { id: 'cpu',    label: 'VS CPU',      sub: 'Fight the AI',           icon: '🤖' },
+  { id: 'create', label: 'CREATE ROOM', sub: 'Host an online match',    icon: '🌐' },
+  { id: 'join',   label: 'JOIN ROOM',   sub: "Enter a friend's code",   icon: '🔑' },
 ];
+
+// Numpad layout for join room on mobile
+const NUMPAD = [
+  ['A','B','C','D'],
+  ['E','F','G','H'],
+  ['I','J','K','L'],
+  ['M','N','O','P'],
+  ['Q','R','S','⌫'],
+];
+
 
 export class LobbyUI {
   constructor() {
@@ -60,12 +70,58 @@ export class LobbyUI {
     ctx.fillText('SELECT MODE', CANVAS_W / 2, 170);
     ctx.restore();
 
-    // Buttons
+    // On mobile (portrait), use a stacked vertical layout
+    const isMobile = window.innerWidth < window.innerHeight;
+
+    if (isMobile) {
+      const mBtnW = CANVAS_W * 0.80;
+      const mBtnH = 120;
+      const mGap  = 28;
+      const mStartX = CANVAS_W / 2 - mBtnW / 2;
+      const mStartY = 220;
+
+      this._hoveredBtn = -1;
+      this._mobileLayout = { btnW: mBtnW, btnH: mBtnH, gap: mGap, startX: mStartX, startY: mStartY };
+
+      MODES.forEach((mode, i) => {
+        const by = mStartY + i * (mBtnH + mGap);
+
+        // Store for hit-test in getHoveredMode
+        ctx.fillStyle = 'rgba(5,5,20,0.80)';
+        ctx.strokeStyle = 'rgba(245,230,200,0.35)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.roundRect(mStartX, by, mBtnW, mBtnH, 14);
+        ctx.fill(); ctx.stroke();
+
+        ctx.font = "52px serif";
+        ctx.textAlign = 'left';
+        ctx.globalAlpha = 0.9;
+        ctx.fillText(mode.icon, mStartX + 28, by + 72);
+        ctx.globalAlpha = 1;
+
+        ctx.font = "900 26px 'Orbitron', monospace";
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#f5e6c8';
+        ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+        ctx.fillText(mode.label, mStartX + 90, by + 50);
+
+        ctx.font = "600 18px 'Rajdhani', Arial";
+        ctx.fillStyle = 'rgba(245,230,200,0.65)';
+        ctx.shadowBlur = 0;
+        ctx.fillText(mode.sub, mStartX + 90, by + 80);
+      });
+
+      return;
+    }
+
+    // Desktop: horizontal layout
     const btnW = 340, btnH = 110;
     const gap  = 30;
     const totalW = MODES.length * btnW + (MODES.length - 1) * gap;
     const startX = (CANVAS_W - totalW) / 2;
     const btnY   = CANVAS_H / 2 - btnH / 2 + 30;
+    this._mobileLayout = null;
 
     this._hoveredBtn = -1;
     MODES.forEach((mode, i) => {
@@ -117,11 +173,22 @@ export class LobbyUI {
   /**
    * Returns the hovered mode id.
    * If mx/my are provided, performs a direct hit-test (for touch events).
-   * Otherwise falls back to the mouse-hover state tracked during draw.
    */
   getHoveredMode(mx, my) {
+    // Mobile vertical layout hit-test
     if (mx !== undefined && my !== undefined) {
-      // Direct hit-test using same layout as drawModeSelect
+      const isMobile = window.innerWidth < window.innerHeight;
+      if (isMobile && this._mobileLayout) {
+        const { btnW, btnH, gap, startX, startY } = this._mobileLayout;
+        for (let i = 0; i < MODES.length; i++) {
+          const by = startY + i * (btnH + gap);
+          if (mx >= startX && mx <= startX + btnW && my >= by && my <= by + btnH) {
+            return MODES[i].id;
+          }
+        }
+        return null;
+      }
+      // Desktop horizontal layout hit-test
       const btnW = 340, btnH = 110, gap = 30;
       const totalW = MODES.length * btnW + (MODES.length - 1) * gap;
       const startX = (CANVAS_W - totalW) / 2;
@@ -135,6 +202,35 @@ export class LobbyUI {
       return null;
     }
     return this._hoveredBtn >= 0 ? MODES[this._hoveredBtn].id : null;
+  }
+
+  /**
+   * Hit-test the on-canvas numpad in join room screen.
+   * Returns the character tapped, '⌫' for backspace, or null.
+   */
+  getNumpadKey(mx, my) {
+    if (!this._numpadLayout) return null;
+    const { startX, startY, keyW, keyH, gap } = this._numpadLayout;
+    for (let row = 0; row < NUMPAD.length; row++) {
+      for (let col = 0; col < NUMPAD[row].length; col++) {
+        const kx = startX + col * (keyW + gap);
+        const ky = startY + row * (keyH + gap);
+        if (mx >= kx && mx <= kx + keyW && my >= ky && my <= ky + keyH) {
+          return NUMPAD[row][col];
+        }
+      }
+    }
+    // Hit-test the JOIN button
+    if (this._joinBtnLayout) {
+      const { x, y, w, h } = this._joinBtnLayout;
+      if (mx >= x && mx <= x + w && my >= y && my <= y + h) return '✔JOIN';
+    }
+    // Hit-test the BACK button
+    if (this._backBtnLayout) {
+      const { x, y, w, h } = this._backBtnLayout;
+      if (mx >= x && mx <= x + w && my >= y && my <= y + h) return '✔BACK';
+    }
+    return null;
   }
 
   // ── Draw: Create Room (lobby waiting) ────────────────────────────────────
@@ -187,10 +283,14 @@ export class LobbyUI {
     ctx.globalAlpha = 1;
 
     // Cancel hint
+    const isMobile = window.innerWidth < window.innerHeight;
     ctx.font = "500 14px 'Rajdhani', Arial";
     ctx.fillStyle = 'rgba(245,230,200,0.4)';
     ctx.shadowBlur = 0;
-    ctx.fillText('Press  ESC  to cancel', CANVAS_W / 2, CANVAS_H - 50);
+    ctx.fillText(
+      isMobile ? 'Tap bottom of screen to cancel' : 'Press  ESC  to cancel',
+      CANVAS_W / 2, CANVAS_H - 50
+    );
 
     ctx.restore();
   }
@@ -205,10 +305,10 @@ export class LobbyUI {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#f5e6c8';
     ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
-    ctx.fillText('ONLINE MATCH — JOIN', CANVAS_W / 2, 120);
+    ctx.fillText('ONLINE MATCH — JOIN', CANVAS_W / 2, 90);
 
-    const boxW = 560, boxH = 140;
-    const boxX = CANVAS_W / 2 - boxW / 2, boxY = 210;
+    const boxW = 560, boxH = 120;
+    const boxX = CANVAS_W / 2 - boxW / 2, boxY = 130;
 
     ctx.fillStyle = 'rgba(5,5,20,0.82)';
     ctx.strokeStyle = errorMsg ? '#ef4444' : '#f0a500';
@@ -219,35 +319,99 @@ export class LobbyUI {
 
     ctx.font = "600 15px 'Orbitron', monospace";
     ctx.fillStyle = 'rgba(245,230,200,0.6)';
-    ctx.fillText('ENTER ROOM CODE:', CANVAS_W / 2, boxY + 36);
+    ctx.fillText('ENTER ROOM CODE:', CANVAS_W / 2, boxY + 32);
 
-    // Typed code with cursor blink
-    const displayCode = (typedCode + '_').split('').join(' ');
-    const showCursor = Math.floor(this._time * 2) % 2 === 0;
     const codeDisplay = typedCode.padEnd(6, '_').split('').join(' ');
-    ctx.font = "900 56px 'Orbitron', monospace";
+    ctx.font = "900 52px 'Orbitron', monospace";
     ctx.fillStyle = '#f0a500';
     ctx.shadowColor = '#000'; ctx.shadowBlur = 0;
     ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-    ctx.fillText(codeDisplay, CANVAS_W / 2, boxY + 108);
+    ctx.fillText(codeDisplay, CANVAS_W / 2, boxY + 100);
     ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
 
     if (errorMsg) {
-      ctx.font = "700 18px 'Orbitron', monospace";
+      ctx.font = "700 16px 'Orbitron', monospace";
       ctx.fillStyle = '#ef4444';
       ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 8;
-      ctx.fillText(`✗  ${errorMsg}`, CANVAS_W / 2, boxY + 180);
-    } else {
-      ctx.font = "600 17px 'Orbitron', monospace";
-      ctx.fillStyle = 'rgba(245,230,200,0.55)';
-      ctx.shadowBlur = 0;
-      ctx.fillText('Type the 6-character code, then press  ENTER', CANVAS_W / 2, boxY + 180);
+      ctx.fillText(`✗  ${errorMsg}`, CANVAS_W / 2, boxY + 145);
     }
 
-    ctx.font = "500 14px 'Rajdhani', Arial";
-    ctx.fillStyle = 'rgba(245,230,200,0.4)';
+    // ── On-canvas Numpad (always shown for mobile) ──────────────────────
+    const isMobile = window.innerWidth < window.innerHeight;
+    const keyW = isMobile ? 140 : 110;
+    const keyH = isMobile ? 72 : 60;
+    const kGap = isMobile ? 16 : 14;
+    const totalKW = 4 * keyW + 3 * kGap;
+    const kStartX = CANVAS_W / 2 - totalKW / 2;
+    const kStartY = isMobile ? 290 : 310;
+
+    this._numpadLayout = { startX: kStartX, startY: kStartY, keyW, keyH, gap: kGap };
+
+    NUMPAD.forEach((row, ri) => {
+      row.forEach((key, ci) => {
+        const kx = kStartX + ci * (keyW + kGap);
+        const ky = kStartY + ri * (keyH + kGap);
+        const isBS = key === '⌫';
+
+        ctx.fillStyle = isBS ? 'rgba(180,30,30,0.7)' : 'rgba(20,20,50,0.85)';
+        ctx.strokeStyle = isBS ? '#ef4444' : 'rgba(245,230,200,0.3)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.roundRect(kx, ky, keyW, keyH, 10);
+        ctx.fill(); ctx.stroke();
+
+        ctx.font = isBS ? `700 ${keyH*0.45}px serif` : `900 ${keyH*0.44}px 'Orbitron', monospace`;
+        ctx.fillStyle = isBS ? '#fca5a5' : '#f5e6c8';
+        ctx.shadowBlur = 0;
+        ctx.textAlign = 'center';
+        ctx.fillText(key, kx + keyW / 2, ky + keyH * 0.66);
+      });
+    });
+
+    // JOIN button
+    const joinEnabled = typedCode.length === 6;
+    const joinY = kStartY + NUMPAD.length * (keyH + kGap) + 12;
+    const joinW = totalKW * 0.55, joinH = keyH;
+    const joinX = CANVAS_W / 2 - joinW / 2;
+    this._joinBtnLayout = { x: joinX, y: joinY, w: joinW, h: joinH };
+
+    ctx.fillStyle = joinEnabled ? 'rgba(60,180,80,0.85)' : 'rgba(40,60,40,0.5)';
+    ctx.strokeStyle = joinEnabled ? '#7ec850' : 'rgba(245,230,200,0.15)';
+    ctx.lineWidth = joinEnabled ? 2 : 1;
+    ctx.beginPath();
+    ctx.roundRect(joinX, joinY, joinW, joinH, 12);
+    ctx.fill(); ctx.stroke();
+
+    ctx.font = `900 ${keyH*0.42}px 'Orbitron', monospace`;
+    ctx.fillStyle = joinEnabled ? '#d1fae5' : 'rgba(245,230,200,0.3)';
+    ctx.shadowBlur = joinEnabled ? 6 : 0;
+    ctx.shadowColor = '#7ec850';
+    ctx.textAlign = 'center';
+    ctx.fillText('JOIN ✔', CANVAS_W / 2, joinY + joinH * 0.66);
     ctx.shadowBlur = 0;
-    ctx.fillText('Press  ESC  to go back', CANVAS_W / 2, CANVAS_H - 50);
+
+    // BACK button
+    const backW = totalKW * 0.35, backH = keyH * 0.75;
+    const backX = CANVAS_W / 2 + joinW / 2 + kGap;
+    const backY = joinY + (joinH - backH) / 2;
+    this._backBtnLayout = { x: backX, y: backY, w: backW, h: backH };
+
+    ctx.fillStyle = 'rgba(60,60,80,0.7)';
+    ctx.strokeStyle = 'rgba(245,230,200,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(backX, backY, backW, backH, 10);
+    ctx.fill(); ctx.stroke();
+
+    ctx.font = `700 ${backH*0.42}px 'Rajdhani', Arial`;
+    ctx.fillStyle = 'rgba(245,230,200,0.55)';
+    ctx.fillText('◀ BACK', backX + backW / 2, backY + backH * 0.68);
+
+    if (!isMobile) {
+      ctx.font = "600 14px 'Rajdhani', Arial";
+      ctx.fillStyle = 'rgba(245,230,200,0.4)';
+      ctx.fillText('Or type on keyboard and press ENTER', CANVAS_W / 2, CANVAS_H - 50);
+    }
 
     ctx.restore();
   }

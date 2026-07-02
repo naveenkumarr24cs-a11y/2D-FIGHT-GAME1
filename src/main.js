@@ -298,7 +298,43 @@ async function init() {
       }
       return;
     }
+
+    // LOBBY_JOIN — numpad touch handler
+    if (gameState === GS.LOBBY_JOIN) {
+      const rect = canvas.getBoundingClientRect();
+      const t = e.changedTouches[0];
+      const mx = (t.clientX - rect.left) * (CANVAS_W / rect.width);
+      const my = (t.clientY - rect.top)  * (CANVAS_H / rect.height);
+      const key = lobbyUI.getNumpadKey(mx, my);
+      if (key === null) return;
+      if (key === '⌫') {
+        joinTypedCode = joinTypedCode.slice(0, -1);
+      } else if (key === '✔JOIN') {
+        if (joinTypedCode.length === 6) handleJoinRoom(joinTypedCode);
+      } else if (key === '✔BACK') {
+        gameState = GS.MODE_SELECT;
+      } else if (joinTypedCode.length < 6) {
+        joinTypedCode += key;
+      }
+      e.preventDefault();
+      return;
+    }
+
+    // LOBBY_CREATE — tap anywhere to cancel (back to menu)
+    if (gameState === GS.LOBBY_CREATE) {
+      const rect = canvas.getBoundingClientRect();
+      const t = e.changedTouches[0];
+      const mx = (t.clientX - rect.left) * (CANVAS_W / rect.width);
+      const my = (t.clientY - rect.top)  * (CANVAS_H / rect.height);
+      // Cancel button area bottom of screen
+      if (my >= CANVAS_H - 100) {
+        netplay.disconnect();
+        gameState = GS.MODE_SELECT;
+        return;
+      }
+    }
   });
+
 
   // ── Input: keyboard ──────────────────────────────────────────────────────
   window.addEventListener('keydown', (e) => {
