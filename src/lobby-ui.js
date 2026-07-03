@@ -17,11 +17,10 @@ const MODES = [
 
 // Numpad layout for join room on mobile
 const NUMPAD = [
-  ['A','B','C','D'],
-  ['E','F','G','H'],
-  ['I','J','K','L'],
-  ['M','N','O','P'],
-  ['Q','R','S','⌫'],
+  ['1','2','3','4','5','6','7','8','9','0'],
+  ['Q','W','E','R','T','Y','U','I','O','P'],
+  ['A','S','D','F','G','H','J','K','L'],
+  ['Z','X','C','V','B','N','M','⌫']
 ];
 
 
@@ -210,10 +209,12 @@ export class LobbyUI {
    */
   getNumpadKey(mx, my) {
     if (!this._numpadLayout) return null;
-    const { startX, startY, keyW, keyH, gap } = this._numpadLayout;
+    const { startY, keyW, keyH, gap } = this._numpadLayout;
     for (let row = 0; row < NUMPAD.length; row++) {
+      const rowW = NUMPAD[row].length * keyW + (NUMPAD[row].length - 1) * gap;
+      const rStartX = CANVAS_W / 2 - rowW / 2;
       for (let col = 0; col < NUMPAD[row].length; col++) {
-        const kx = startX + col * (keyW + gap);
+        const kx = rStartX + col * (keyW + gap);
         const ky = startY + row * (keyH + gap);
         if (mx >= kx && mx <= kx + keyW && my >= ky && my <= ky + keyH) {
           return NUMPAD[row][col];
@@ -225,12 +226,23 @@ export class LobbyUI {
       const { x, y, w, h } = this._joinBtnLayout;
       if (mx >= x && mx <= x + w && my >= y && my <= y + h) return '✔JOIN';
     }
-    // Hit-test the BACK button
+    // Hit-test the BACK button in Join Room
     if (this._backBtnLayout) {
       const { x, y, w, h } = this._backBtnLayout;
       if (mx >= x && mx <= x + w && my >= y && my <= y + h) return '✔BACK';
     }
     return null;
+  }
+
+  /**
+   * Hit-test the BACK button on the Create Room screen
+   */
+  getCreateRoomBackHit(mx, my) {
+    if (this._createBackBtnLayout) {
+      const { x, y, w, h } = this._createBackBtnLayout;
+      if (mx >= x && mx <= x + w && my >= y && my <= y + h) return true;
+    }
+    return false;
   }
 
   // ── Draw: Create Room (lobby waiting) ────────────────────────────────────
@@ -282,15 +294,33 @@ export class LobbyUI {
     );
     ctx.globalAlpha = 1;
 
-    // Cancel hint
+    // Mobile BACK button
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    ctx.font = "500 14px 'Rajdhani', Arial";
-    ctx.fillStyle = 'rgba(245,230,200,0.4)';
-    ctx.shadowBlur = 0;
-    ctx.fillText(
-      isMobile ? 'Tap bottom of screen to cancel' : 'Press  ESC  to cancel',
-      CANVAS_W / 2, CANVAS_H - 50
-    );
+    if (isMobile) {
+      const backW = 200, backH = 60;
+      const backX = CANVAS_W / 2 - backW / 2;
+      const backY = CANVAS_H - 100;
+      
+      this._createBackBtnLayout = { x: backX, y: backY, w: backW, h: backH };
+      
+      ctx.fillStyle = 'rgba(60,60,80,0.7)';
+      ctx.strokeStyle = 'rgba(245,230,200,0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(backX, backY, backW, backH, 12);
+      ctx.fill(); ctx.stroke();
+  
+      ctx.font = "700 22px 'Rajdhani', Arial";
+      ctx.fillStyle = 'rgba(245,230,200,0.7)';
+      ctx.textAlign = 'center';
+      ctx.shadowBlur = 0;
+      ctx.fillText('◀ BACK', CANVAS_W / 2, backY + 38);
+    } else {
+      ctx.font = "500 14px 'Rajdhani', Arial";
+      ctx.fillStyle = 'rgba(245,230,200,0.4)';
+      ctx.shadowBlur = 0;
+      ctx.fillText('Press  ESC  to cancel', CANVAS_W / 2, CANVAS_H - 50);
+    }
 
     ctx.restore();
   }
@@ -338,21 +368,21 @@ export class LobbyUI {
 
     // ── On-canvas Controls (Numpad for mobile, just buttons for PC) ──────
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const keyW = isMobile ? 140 : 110;
-    const keyH = isMobile ? 72 : 60;
-    const kGap = isMobile ? 16 : 14;
-    const totalKW = 4 * keyW + 3 * kGap;
-    const kStartX = CANVAS_W / 2 - totalKW / 2;
+    const keyW = isMobile ? 80 : 60;
+    const keyH = isMobile ? 70 : 50;
+    const kGap = isMobile ? 12 : 10;
     
     let joinY = 0;
 
     if (isMobile) {
-      const kStartY = 290;
-      this._numpadLayout = { startX: kStartX, startY: kStartY, keyW, keyH, gap: kGap };
+      const kStartY = 280;
+      this._numpadLayout = { startY: kStartY, keyW, keyH, gap: kGap };
 
       NUMPAD.forEach((row, ri) => {
+        const rowW = row.length * keyW + (row.length - 1) * kGap;
+        const rStartX = CANVAS_W / 2 - rowW / 2;
         row.forEach((key, ci) => {
-          const kx = kStartX + ci * (keyW + kGap);
+          const kx = rStartX + ci * (keyW + kGap);
           const ky = kStartY + ri * (keyH + kGap);
           const isBS = key === '⌫';
 
@@ -370,7 +400,7 @@ export class LobbyUI {
           ctx.fillText(key, kx + keyW / 2, ky + keyH * 0.66);
         });
       });
-      joinY = kStartY + NUMPAD.length * (keyH + kGap) + 12;
+      joinY = kStartY + NUMPAD.length * (keyH + kGap) + 20;
     } else {
       this._numpadLayout = null; // Don't allow clicking invisible numpad on PC
       joinY = boxY + boxH + 40;  // Position buttons closer to the input box on PC
@@ -378,7 +408,7 @@ export class LobbyUI {
 
     // JOIN button
     const joinEnabled = typedCode.length === 6;
-    const joinW = totalKW * 0.55, joinH = keyH;
+    const joinW = 300, joinH = isMobile ? 70 : 60;
     const joinX = CANVAS_W / 2 - joinW / 2;
     this._joinBtnLayout = { x: joinX, y: joinY, w: joinW, h: joinH };
 

@@ -325,14 +325,13 @@ async function init() {
       return;
     }
 
-    // LOBBY_CREATE — tap anywhere to cancel (back to menu)
+    // LOBBY_CREATE — tap BACK button to cancel
     if (gameState === GS.LOBBY_CREATE) {
       const rect = canvas.getBoundingClientRect();
       const t = e.changedTouches[0];
       const mx = (t.clientX - rect.left) * (CANVAS_W / rect.width);
       const my = (t.clientY - rect.top)  * (CANVAS_H / rect.height);
-      // Cancel button area bottom of screen
-      if (my >= CANVAS_H - 100) {
+      if (lobbyUI.getCreateRoomBackHit(mx, my)) {
         netplay.disconnect();
         gameState = GS.MODE_SELECT;
         return;
