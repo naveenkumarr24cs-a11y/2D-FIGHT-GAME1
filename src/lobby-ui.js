@@ -71,7 +71,7 @@ export class LobbyUI {
     ctx.restore();
 
     // On mobile (portrait), use a stacked vertical layout
-    const isMobile = window.innerWidth < window.innerHeight;
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     if (isMobile) {
       const mBtnW = CANVAS_W * 0.80;
@@ -177,7 +177,7 @@ export class LobbyUI {
   getHoveredMode(mx, my) {
     // Mobile vertical layout hit-test
     if (mx !== undefined && my !== undefined) {
-      const isMobile = window.innerWidth < window.innerHeight;
+      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       if (isMobile && this._mobileLayout) {
         const { btnW, btnH, gap, startX, startY } = this._mobileLayout;
         for (let i = 0; i < MODES.length; i++) {
@@ -283,7 +283,7 @@ export class LobbyUI {
     ctx.globalAlpha = 1;
 
     // Cancel hint
-    const isMobile = window.innerWidth < window.innerHeight;
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     ctx.font = "500 14px 'Rajdhani', Arial";
     ctx.fillStyle = 'rgba(245,230,200,0.4)';
     ctx.shadowBlur = 0;
@@ -336,41 +336,48 @@ export class LobbyUI {
       ctx.fillText(`✗  ${errorMsg}`, CANVAS_W / 2, boxY + 145);
     }
 
-    // ── On-canvas Numpad (always shown for mobile) ──────────────────────
-    const isMobile = window.innerWidth < window.innerHeight;
+    // ── On-canvas Controls (Numpad for mobile, just buttons for PC) ──────
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const keyW = isMobile ? 140 : 110;
     const keyH = isMobile ? 72 : 60;
     const kGap = isMobile ? 16 : 14;
     const totalKW = 4 * keyW + 3 * kGap;
     const kStartX = CANVAS_W / 2 - totalKW / 2;
-    const kStartY = isMobile ? 290 : 310;
+    
+    let joinY = 0;
 
-    this._numpadLayout = { startX: kStartX, startY: kStartY, keyW, keyH, gap: kGap };
+    if (isMobile) {
+      const kStartY = 290;
+      this._numpadLayout = { startX: kStartX, startY: kStartY, keyW, keyH, gap: kGap };
 
-    NUMPAD.forEach((row, ri) => {
-      row.forEach((key, ci) => {
-        const kx = kStartX + ci * (keyW + kGap);
-        const ky = kStartY + ri * (keyH + kGap);
-        const isBS = key === '⌫';
+      NUMPAD.forEach((row, ri) => {
+        row.forEach((key, ci) => {
+          const kx = kStartX + ci * (keyW + kGap);
+          const ky = kStartY + ri * (keyH + kGap);
+          const isBS = key === '⌫';
 
-        ctx.fillStyle = isBS ? 'rgba(180,30,30,0.7)' : 'rgba(20,20,50,0.85)';
-        ctx.strokeStyle = isBS ? '#ef4444' : 'rgba(245,230,200,0.3)';
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.roundRect(kx, ky, keyW, keyH, 10);
-        ctx.fill(); ctx.stroke();
+          ctx.fillStyle = isBS ? 'rgba(180,30,30,0.7)' : 'rgba(20,20,50,0.85)';
+          ctx.strokeStyle = isBS ? '#ef4444' : 'rgba(245,230,200,0.3)';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.roundRect(kx, ky, keyW, keyH, 10);
+          ctx.fill(); ctx.stroke();
 
-        ctx.font = isBS ? `700 ${keyH*0.45}px serif` : `900 ${keyH*0.44}px 'Orbitron', monospace`;
-        ctx.fillStyle = isBS ? '#fca5a5' : '#f5e6c8';
-        ctx.shadowBlur = 0;
-        ctx.textAlign = 'center';
-        ctx.fillText(key, kx + keyW / 2, ky + keyH * 0.66);
+          ctx.font = isBS ? `700 ${keyH*0.45}px serif` : `900 ${keyH*0.44}px 'Orbitron', monospace`;
+          ctx.fillStyle = isBS ? '#fca5a5' : '#f5e6c8';
+          ctx.shadowBlur = 0;
+          ctx.textAlign = 'center';
+          ctx.fillText(key, kx + keyW / 2, ky + keyH * 0.66);
+        });
       });
-    });
+      joinY = kStartY + NUMPAD.length * (keyH + kGap) + 12;
+    } else {
+      this._numpadLayout = null; // Don't allow clicking invisible numpad on PC
+      joinY = boxY + boxH + 40;  // Position buttons closer to the input box on PC
+    }
 
     // JOIN button
     const joinEnabled = typedCode.length === 6;
-    const joinY = kStartY + NUMPAD.length * (keyH + kGap) + 12;
     const joinW = totalKW * 0.55, joinH = keyH;
     const joinX = CANVAS_W / 2 - joinW / 2;
     this._joinBtnLayout = { x: joinX, y: joinY, w: joinW, h: joinH };
@@ -410,7 +417,8 @@ export class LobbyUI {
     if (!isMobile) {
       ctx.font = "600 14px 'Rajdhani', Arial";
       ctx.fillStyle = 'rgba(245,230,200,0.4)';
-      ctx.fillText('Or type on keyboard and press ENTER', CANVAS_W / 2, CANVAS_H - 50);
+      ctx.fillText('Type on keyboard and press ENTER (or click JOIN)', CANVAS_W / 2, joinY + joinH + 40);
+      ctx.fillText('Press ESC to go back (or click BACK)', CANVAS_W / 2, joinY + joinH + 65);
     }
 
     ctx.restore();
