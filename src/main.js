@@ -164,20 +164,13 @@ async function init() {
   const bgMusic = document.getElementById('bg-music');
   if (bgMusic) bgMusic.volume = 0.4;
 
-  // Browser Autoplay Policy: Unlock audio context on first user interaction
-  let _audioUnlocked = false;
-  const unlockAudio = () => {
-    if (_audioUnlocked || !bgMusic) return;
-    _audioUnlocked = true;
-    bgMusic.play().then(() => {
-      bgMusic.pause();
-      bgMusic.currentTime = 0;
-    }).catch(err => {
-      _audioUnlocked = false; // Try again on next click if it failed
-    });
-  };
-  window.addEventListener('click', unlockAudio);
-  window.addEventListener('touchstart', unlockAudio);
+  function playMusic() {
+    if (bgMusic && bgMusic.paused) bgMusic.play().catch(e => console.log('Music play blocked:', e));
+  }
+
+  function stopMusic() {
+    if (bgMusic && !bgMusic.paused) { bgMusic.pause(); bgMusic.currentTime = 0; }
+  }
 
   // Online multiplayer state
   let isOnline      = false;
@@ -239,6 +232,7 @@ async function init() {
           if (isOnline) netplay.disconnect();
           isOnline = false;
           gameState = GS.MODE_SELECT;
+          stopMusic();
           return;
         }
       }
@@ -248,8 +242,8 @@ async function init() {
     if (gameState === GS.MODE_SELECT) {
       const mode = lobbyUI.getHoveredMode(mx, my);
       if (!mode) return; // clicked outside buttons
-      if (mode === 'cpu')    { isOnline = false; startFirstMatch(); }
-      if (mode === 'create') { startCreateRoom(); }
+      if (mode === 'cpu')    { playMusic(); isOnline = false; startFirstMatch(); }
+      if (mode === 'create') { playMusic(); startCreateRoom(); }
       if (mode === 'join')   { gameState = GS.LOBBY_JOIN; joinTypedCode = ''; joinErrorMsg = ''; }
     }
 
@@ -276,9 +270,10 @@ async function init() {
         if (key === '⌫') {
           joinTypedCode = joinTypedCode.slice(0, -1);
         } else if (key === '✔JOIN') {
-          if (joinTypedCode.length === 6) handleJoinRoom(joinTypedCode);
+          if (joinTypedCode.length === 6) { playMusic(); handleJoinRoom(joinTypedCode); }
         } else if (key === '✔BACK') {
           gameState = GS.MODE_SELECT;
+          stopMusic();
         } else if (joinTypedCode.length < 6) {
           joinTypedCode += key;
         }
@@ -291,6 +286,7 @@ async function init() {
       if (lobbyUI.getCreateRoomBackHit(mx, my)) {
         netplay.disconnect();
         gameState = GS.MODE_SELECT;
+        stopMusic();
         return;
       }
     }
@@ -378,6 +374,7 @@ async function init() {
       if (lobbyUI.getCreateRoomBackHit(mx, my)) {
         netplay.disconnect();
         gameState = GS.MODE_SELECT;
+        stopMusic();
         return;
       }
     }
@@ -392,6 +389,7 @@ async function init() {
       if (gameState === GS.LOBBY_CREATE || gameState === GS.LOBBY_JOIN) {
         netplay.disconnect();
         gameState = GS.MODE_SELECT;
+        stopMusic();
       } else if (gameState === GS.FIGHTING || gameState === GS.ROUND_INTRO) {
         // Pause during game
         if (!isOnline) gameState = GS.PAUSED;
@@ -411,6 +409,7 @@ async function init() {
       if (e.key === 'Backspace') {
         joinTypedCode = joinTypedCode.slice(0, -1);
       } else if (e.key === 'Enter' && joinTypedCode.length === 6) {
+        playMusic();
         handleJoinRoom(joinTypedCode);
       } else if (joinTypedCode.length < 6 && /^[A-Za-z0-9]$/.test(e.key)) {
         joinTypedCode += e.key.toUpperCase();
@@ -424,6 +423,7 @@ async function init() {
         netplay.disconnect();
         isOnline = false;
         gameState = GS.MODE_SELECT;
+        stopMusic();
       } else {
         startFirstMatch();
       }
@@ -432,6 +432,7 @@ async function init() {
       netplay.disconnect();
       isOnline = false;
       gameState = GS.MODE_SELECT;
+      stopMusic();
     }
   });
 
@@ -584,11 +585,6 @@ async function init() {
 
   // ── Main loop ─────────────────────────────────────────────────────────────
   engine.start((dt) => {
-    if (bgMusic) {
-      const isMatch = [GS.CINEMATIC_INTRO, GS.ROUND_INTRO, GS.FIGHTING, GS.PAUSED, GS.ROUND_END, GS.MATCH_END, GS.OPPONENT_LEFT].includes(gameState);
-      if (isMatch && bgMusic.paused) bgMusic.play().catch(()=>{});
-      if (!isMatch && !bgMusic.paused) { bgMusic.pause(); bgMusic.currentTime = 0; }
-    }
     ui.update(dt);
     lobbyUI.update(dt);
 
