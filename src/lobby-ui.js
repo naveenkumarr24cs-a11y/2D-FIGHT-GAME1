@@ -208,16 +208,17 @@ export class LobbyUI {
    * Returns the character tapped, '⌫' for backspace, or null.
    */
   getNumpadKey(mx, my) {
-    if (!this._numpadLayout) return null;
-    const { startY, keyW, keyH, gap } = this._numpadLayout;
-    for (let row = 0; row < NUMPAD.length; row++) {
-      const rowW = NUMPAD[row].length * keyW + (NUMPAD[row].length - 1) * gap;
-      const rStartX = CANVAS_W / 2 - rowW / 2;
-      for (let col = 0; col < NUMPAD[row].length; col++) {
-        const kx = rStartX + col * (keyW + gap);
-        const ky = startY + row * (keyH + gap);
-        if (mx >= kx && mx <= kx + keyW && my >= ky && my <= ky + keyH) {
-          return NUMPAD[row][col];
+    if (this._numpadLayout) {
+      const { startY, keyW, keyH, gap } = this._numpadLayout;
+      for (let row = 0; row < NUMPAD.length; row++) {
+        const rowW = NUMPAD[row].length * keyW + (NUMPAD[row].length - 1) * gap;
+        const rStartX = CANVAS_W / 2 - rowW / 2;
+        for (let col = 0; col < NUMPAD[row].length; col++) {
+          const kx = rStartX + col * (keyW + gap);
+          const ky = startY + row * (keyH + gap);
+          if (mx >= kx && mx <= kx + keyW && my >= ky && my <= ky + keyH) {
+            return NUMPAD[row][col];
+          }
         }
       }
     }

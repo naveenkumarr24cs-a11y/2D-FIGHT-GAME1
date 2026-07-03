@@ -200,9 +200,9 @@ async function init() {
     }
 
     if (gameState === GS.FIGHTING || gameState === GS.ROUND_INTRO) {
-      // Pause button check (Top center below timer: x = center - 18 to center + 18, y = 75 to 111)
-      if (mx >= CANVAS_W/2 - 25 && mx <= CANVAS_W/2 + 25 && my >= 70 && my <= 120) {
-        if (!isOnline) gameState = GS.PAUSED; // Only pause offline for now
+      // Pause button check (Top center below timer: x = center - 35 to center + 35, y = 60 to 130)
+      if (mx >= CANVAS_W/2 - 35 && mx <= CANVAS_W/2 + 35 && my >= 60 && my <= 130) {
+        gameState = GS.PAUSED;
         return;
       }
     }
