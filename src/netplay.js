@@ -49,6 +49,9 @@ export const NetplayStatus = Object.freeze({
 export class NetplayClient {
   constructor() {
     this._ws            = null;
+    this._pc            = null;   // WebRTC RTCPeerConnection
+    this._dataChannel   = null;   // WebRTC RTCDataChannel for game inputs
+    this._pingInterval  = null;
     this.status         = NetplayStatus.DISCONNECTED;
     this.roomId         = null;
     this.playerSlot     = null;   // 1 or 2
@@ -209,6 +212,9 @@ export class NetplayClient {
   }
 
   disconnect() {
+    if (this._pingInterval) { clearInterval(this._pingInterval); this._pingInterval = null; }
+    if (this._dataChannel) { this._dataChannel.close(); this._dataChannel = null; }
+    if (this._pc) { this._pc.close(); this._pc = null; }
     if (this._ws) { this._ws.close(); this._ws = null; }
     this.status         = NetplayStatus.DISCONNECTED;
     this._delayLocked   = false;   // allow delay to adapt again after disconnect
@@ -231,7 +237,13 @@ export class NetplayClient {
 
     // 8-byte ping-pong: marker[0]=0xFF, pong[1]=0x01, ts[2..5]
     if (buffer.byteLength === 8 && data.getUint8(0) === 0xFF) {
-      if (data.getUint8(1) === 0x01) {
+      if (data.getUint8(1) === 0x00) {
+        // Ping received — echo back as pong over P2P channel
+        data.setUint8(1, 0x01);
+        if (this._dataChannel && this._dataChannel.readyState === 'open') {
+          this._dataChannel.send(buffer);
+        }
+      } else if (data.getUint8(1) === 0x01) {
         // Pong received — calculate RTT
         const sentTs = data.getUint32(2, true);
         const now    = Date.now() & 0xFFFFFFFF;
@@ -268,9 +280,24 @@ export class NetplayClient {
 
       case 'start':
         this.mapSeed      = msg.mapSeed ?? null;
-        this.status       = NetplayStatus.PLAYING;
-        this._delayLocked = true;  // Fix 8: lock delay — no mid-match changes
-        if (this.onStart) this.onStart(msg.yourSlot);
+        this.status       = NetplayStatus.CONNECTING; // Waiting for WebRTC connection
+        this._setupWebRTC();
+        break;
+
+      case 'webrtc_offer':
+        if (!this._pc) this._setupWebRTC();
+        this._pc.setRemoteDescription(msg.offer)
+          .then(() => this._pc.createAnswer())
+          .then(answer => this._pc.setLocalDescription(answer))
+          .then(() => this._sendJSON({ type: 'webrtc_answer', answer: this._pc.localDescription }));
+        break;
+
+      case 'webrtc_answer':
+        if (this._pc) this._pc.setRemoteDescription(msg.answer);
+        break;
+
+      case 'webrtc_ice':
+        if (this._pc && msg.candidate) this._pc.addIceCandidate(msg.candidate).catch(e => console.error(e));
         break;
 
       // JSON input fallback (legacy or control frame)
@@ -337,16 +364,67 @@ export class NetplayClient {
     }
   }
 
+  // ── WebRTC Setup ──────────────────────────────────────────────────────────
+
+  _setupWebRTC() {
+    this._pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    this._pc.onicecandidate = (e) => {
+      if (e.candidate) this._sendJSON({ type: 'webrtc_ice', candidate: e.candidate });
+    };
+
+    if (this.isHost) {
+      // Host creates the data channel (unreliable/unordered for lowest latency game data)
+      this._setupDataChannel(this._pc.createDataChannel('game_data', { ordered: false, maxRetransmits: 0 }));
+      this._pc.createOffer().then(offer => this._pc.setLocalDescription(offer))
+        .then(() => this._sendJSON({ type: 'webrtc_offer', offer: this._pc.localDescription }));
+    } else {
+      // Guest waits for data channel from host
+      this._pc.ondatachannel = (e) => this._setupDataChannel(e.channel);
+    }
+  }
+
+  _setupDataChannel(channel) {
+    this._dataChannel = channel;
+    this._dataChannel.binaryType = 'arraybuffer';
+    
+    this._dataChannel.onopen = () => {
+      console.log('🔗 WebRTC DataChannel opened! P2P connection established.');
+      this.status       = NetplayStatus.PLAYING;
+      this._delayLocked = true;
+      if (this.onStart) this.onStart(this.playerSlot);
+
+      // Start ping loop over P2P channel
+      this._pingInterval = setInterval(() => {
+        if (this._dataChannel.readyState !== 'open') return;
+        const buf = new ArrayBuffer(8);
+        const view = new DataView(buf);
+        view.setUint8(0, 0xFF);
+        view.setUint8(1, 0x00);
+        view.setUint32(2, Date.now() & 0xFFFFFFFF, true);
+        this._dataChannel.send(buf);
+      }, 1000);
+    };
+
+    this._dataChannel.onmessage = (e) => {
+      if (e.data instanceof ArrayBuffer) this._handleBinary(e.data);
+    };
+
+    this._dataChannel.onclose = () => this.disconnect();
+  }
+
   // ── Send helpers ──────────────────────────────────────────────────────────
 
   /** Send a 6-byte binary input packet — fastest possible. */
   _sendInputBinary(frame, keys) {
-    if (!this._ws || this._ws.readyState !== WebSocket.OPEN) return;
+    if (!this._dataChannel || this._dataChannel.readyState !== 'open') return;
     const buf = new ArrayBuffer(6);
     const view = new DataView(buf);
     view.setUint32(0, frame, true);   // little-endian
     view.setUint16(4, keys,  true);
-    this._ws.send(buf);
+    this._dataChannel.send(buf);
   }
 
   _sendJSON(obj) {

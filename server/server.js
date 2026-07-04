@@ -217,6 +217,15 @@ wss.on('connection', (ws) => {
         if (opponent) sendJSON(opponent, { type: 'taunt', text: String(msg.text || '').slice(0, 64) });
         break;
       }
+
+      // ── WebRTC Signaling ──────────────────────────────────────────────────
+      case 'webrtc_offer':
+      case 'webrtc_answer':
+      case 'webrtc_ice': {
+        const opponent = getOpponent(ws);
+        if (opponent) sendJSON(opponent, msg); // just relay verbatim
+        break;
+      }
     }
   });
 
