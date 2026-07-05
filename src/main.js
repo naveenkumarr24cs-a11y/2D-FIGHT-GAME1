@@ -164,6 +164,19 @@ async function init() {
   const bgMusic = document.getElementById('bg-music');
   if (bgMusic) bgMusic.volume = 0.4;
 
+  // Unlock audio on first ANY user interaction (browsers block audio until then)
+  let _audioUnlocked = false;
+  function _unlockAudio() {
+    if (_audioUnlocked) return;
+    _audioUnlocked = true;
+    if (bgMusic) {
+      bgMusic.play().then(() => { bgMusic.pause(); bgMusic.currentTime = 0; }).catch(() => {});
+    }
+  }
+  document.addEventListener('click',     _unlockAudio, { once: false });
+  document.addEventListener('keydown',   _unlockAudio, { once: false });
+  document.addEventListener('touchstart', _unlockAudio, { once: false });
+
   function playMusic() {
     if (bgMusic && bgMusic.paused) bgMusic.play().catch(e => console.log('Music play blocked:', e));
   }
@@ -244,7 +257,7 @@ async function init() {
       if (!mode) return; // clicked outside buttons
       if (mode === 'cpu')    { playMusic(); isOnline = false; startFirstMatch(); }
       if (mode === 'create') { playMusic(); startCreateRoom(); }
-      if (mode === 'join')   { gameState = GS.LOBBY_JOIN; joinTypedCode = ''; joinErrorMsg = ''; }
+      if (mode === 'join')   { playMusic(); gameState = GS.LOBBY_JOIN; joinTypedCode = ''; joinErrorMsg = ''; }
     }
 
     // MATCH_END — tap anywhere to play again (mobile has no keyboard)
@@ -442,6 +455,7 @@ async function init() {
   netplay.onStart = (slot) => {
     localSlot = slot;
     console.log(`[Netplay] Match started. I am Player ${slot}`);
+    playMusic(); // Ensure music plays when WebRTC match starts
     startOnlineMatch();
   };
   netplay.onOpponentLeft = () => {
